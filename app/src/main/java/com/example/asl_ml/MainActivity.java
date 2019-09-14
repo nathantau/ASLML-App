@@ -1,19 +1,24 @@
 package com.example.asl_ml;
 
-import androidx.appcompat.app.AppCompatActivity;
-
-import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.media.Image;
 import android.os.Bundle;
 import android.provider.MediaStore;
-import android.util.Base64;
 import android.widget.ImageView;
 
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
+
+import org.json.JSONObject;
+
 import java.io.ByteArrayOutputStream;
-import java.util.logging.Logger;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -24,20 +29,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-
         dispatchTakePictureIntent();
 
 
-        //imageView.setImageDrawable()
-
-
-
         setContentView(R.layout.activity_main);
-
-
-
-
     }
+
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -54,7 +51,7 @@ public class MainActivity extends AppCompatActivity {
                 System.out.print(b);
             }
 
-            //System.out.println(byteArray);
+            sendRequest(byteArray);
 
             Bitmap decodedByte = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.length);
 
@@ -62,6 +59,48 @@ public class MainActivity extends AppCompatActivity {
             imageView.setImageBitmap(decodedByte);
         }
     }
+
+    private void sendRequest(final byte[] byteArray) {
+
+        RequestQueue queue = Volley.newRequestQueue(this);
+        String url ="http://aslml-252919.appspot.com"; // Change URL to match our server
+
+        System.out.println("HERE");
+
+        JSONObject jsonObject = new JSONObject();
+
+        StringBuilder sb = new StringBuilder();
+
+        for(byte b : byteArray) {
+            sb.append(b);
+        }
+
+        try{
+            jsonObject.put("byteArray", sb);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
+                (Request.Method.POST, url, jsonObject, new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        System.out.println("RESPONSE1: " + response.toString().substring(0,response.toString().length()/2));
+                        System.out.println("RESPONSE2: " + response.toString().substring(response.toString().length()/2, response.toString().length()));
+
+                    }
+                }, new Response.ErrorListener() {
+
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        // TODO: Handle error
+                        error.printStackTrace();
+                    }
+                });
+
+        queue.add(jsonObjectRequest);
+
+    }
+
 
     private void dispatchTakePictureIntent() {
         Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
