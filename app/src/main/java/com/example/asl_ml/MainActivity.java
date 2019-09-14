@@ -5,10 +5,15 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.Image;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.util.Base64;
 import android.widget.ImageView;
+
+import java.io.ByteArrayOutputStream;
+import java.util.logging.Logger;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -39,8 +44,22 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
             Bundle extras = data.getExtras();
             Bitmap imageBitmap = (Bitmap) extras.get("data");
+
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            imageBitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
+            byte[] byteArray = byteArrayOutputStream.toByteArray();
+
+            System.out.println("Byte Array");
+            for (byte b : byteArray) {
+                System.out.print(b);
+            }
+
+            //System.out.println(byteArray);
+
+            Bitmap decodedByte = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.length);
+
             imageView = (ImageView) findViewById(R.id.cameraDisplay);
-            imageView.setImageBitmap(imageBitmap);
+            imageView.setImageBitmap(decodedByte);
         }
     }
 
