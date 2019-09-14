@@ -15,8 +15,11 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+
+import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.util.HashMap;
@@ -65,31 +68,35 @@ public class MainActivity extends AppCompatActivity {
     private void sendRequest(final byte[] byteArray) {
 
         RequestQueue queue = Volley.newRequestQueue(this);
-        String url ="serverUrl"; // Change URL to match our server
+        String url ="http://aslml-252919.appspot.com"; // Change URL to match our server
 
+        System.out.println("HERE");
 
-        StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
-                new Response.Listener<String>() {
+        JSONObject jsonObject = new JSONObject();
+
+        try{
+            jsonObject.put("byteArray", byteArray.toString());
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
+                (Request.Method.GET, url, jsonObject, new Response.Listener<JSONObject>() {
+
                     @Override
-                    public void onResponse(String response) {
-
-                        // Display the first 500 characters of the response string.
-//                        textView.setText("Response is: "+ response.substring(0,500));
+                    public void onResponse(JSONObject response) {
+                        System.out.println("THIS IS THE RESPONSE: " + response);
                     }
                 }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-//                textView.setText("That didn't work!");
-            }
-        }){
-            @Override
-            protected Map<String, String> getParams(){
-                Map<String,String> params = new HashMap<String, String>();
-                params.put("byteArray", byteArray.toString());
-                return params;
-            }
-        };
-        queue.add(stringRequest);
+
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        // TODO: Handle error
+
+                    }
+                });
+
+        queue.add(jsonObjectRequest);
 
     }
 
