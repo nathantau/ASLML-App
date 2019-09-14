@@ -2,18 +2,25 @@ package com.example.asl_ml;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.media.Image;
+import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
-import android.util.Base64;
 import android.widget.ImageView;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+
 import java.io.ByteArrayOutputStream;
-import java.util.logging.Logger;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -24,20 +31,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-
         dispatchTakePictureIntent();
 
 
-        //imageView.setImageDrawable()
-
-
-
         setContentView(R.layout.activity_main);
-
-
-
-
     }
+
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -54,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
                 System.out.print(b);
             }
 
-            //System.out.println(byteArray);
+            sendRequest(byteArray);
 
             Bitmap decodedByte = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.length);
 
@@ -62,6 +61,38 @@ public class MainActivity extends AppCompatActivity {
             imageView.setImageBitmap(decodedByte);
         }
     }
+
+    private void sendRequest(final byte[] byteArray) {
+
+        RequestQueue queue = Volley.newRequestQueue(this);
+        String url ="serverUrl"; // Change URL to match our server
+
+
+        StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+
+                        // Display the first 500 characters of the response string.
+//                        textView.setText("Response is: "+ response.substring(0,500));
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+//                textView.setText("That didn't work!");
+            }
+        }){
+            @Override
+            protected Map<String, String> getParams(){
+                Map<String,String> params = new HashMap<String, String>();
+                params.put("byteArray", byteArray.toString());
+                return params;
+            }
+        };
+        queue.add(stringRequest);
+
+    }
+
 
     private void dispatchTakePictureIntent() {
         Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
