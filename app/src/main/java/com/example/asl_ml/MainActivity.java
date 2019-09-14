@@ -68,8 +68,15 @@ public class MainActivity extends AppCompatActivity {
         System.out.println("HERE");
 
         JSONObject jsonObject = new JSONObject();
+
+        StringBuilder sb = new StringBuilder();
+
+        for(byte b : byteArray) {
+            sb.append(b);
+        }
+
         try{
-            jsonObject.put("byteArray", byteArray.toString());
+            jsonObject.put("byteArray", sb);
         } catch (Exception e){
             e.printStackTrace();
         }
@@ -77,7 +84,9 @@ public class MainActivity extends AppCompatActivity {
                 (Request.Method.POST, url, jsonObject, new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
-                        System.out.println("THIS IS THE RESPONSE: " + response);
+                        System.out.println("RESPONSE1: " + response.toString().substring(0,response.toString().length()/2));
+                        System.out.println("RESPONSE2: " + response.toString().substring(response.toString().length()/2, response.toString().length()));
+
                     }
                 }, new Response.ErrorListener() {
 
