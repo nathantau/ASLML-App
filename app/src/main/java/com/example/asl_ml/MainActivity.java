@@ -93,7 +93,7 @@ public class MainActivity extends AppCompatActivity {
                 button.setClickable(false);
                 final Timer timer = new Timer();
                 int begin = 0;
-                int timeInterval = 333;
+                int timeInterval = 1000;
                 timer.schedule(new TimerTask() {
                     int counter = 0;
                     @Override
@@ -134,12 +134,6 @@ public class MainActivity extends AppCompatActivity {
                 safe = false;
                 File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
 
-                Bitmap bitmap = BitmapFactory.decodeFile(pictureFile.getPath());
-
-                ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-                Bitmap.createScaledBitmap(bitmap, 120, 120, false).compress(Bitmap.CompressFormat.PNG, 50, byteArrayOutputStream);
-                byte[] byteArray = byteArrayOutputStream.toByteArray();
-                sendRequest(byteArray);
 
 
 
@@ -153,11 +147,21 @@ public class MainActivity extends AppCompatActivity {
                     FileOutputStream fos = new FileOutputStream(pictureFile);
                     fos.write(data);
                     fos.close();
+
+                    Bitmap bitmap = BitmapFactory.decodeFile(pictureFile.getPath());
+
+                    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                    Bitmap.createScaledBitmap(bitmap, 120, 120, false).compress(Bitmap.CompressFormat.PNG, 50, byteArrayOutputStream);
+                    byte[] byteArray = byteArrayOutputStream.toByteArray();
+                    sendRequest(byteArray);
+
                 } catch (FileNotFoundException e) {
                     Log.d("camera", "File not found: " + e.getMessage());
                 } catch (IOException e) {
                     Log.d("camera", "Error accessing file: " + e.getMessage());
                 }
+
+
 
                 preview = new CameraPreview(getApplicationContext(), camera);
                 FrameLayout frameLayout = findViewById(R.id.camera_frame);
