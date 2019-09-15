@@ -3,8 +3,10 @@ package com.example.asl_ml;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.speech.tts.TextToSpeech;
 import android.widget.ImageView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -17,12 +19,16 @@ import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 
 import org.json.JSONObject;
+import org.w3c.dom.Text;
 
 import java.io.ByteArrayOutputStream;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
     static final int REQUEST_IMAGE_CAPTURE = 1;
+    TextToSpeech textToSpeech;
+    boolean canSpeak;
     static ImageView imageView;
 
     @Override
@@ -31,7 +37,7 @@ public class MainActivity extends AppCompatActivity {
 
         dispatchTakePictureIntent();
 
-
+        sayWords("Nathan is the coolest human being ever", "English");
         setContentView(R.layout.activity_main);
     }
 
@@ -42,16 +48,16 @@ public class MainActivity extends AppCompatActivity {
             Bundle extras = data.getExtras();
             Bitmap imageBitmap = (Bitmap) extras.get("data");
 
-            System.out.println("WIDTH" + imageBitmap.getWidth());
-            System.out.println("HEIGHT" + imageBitmap.getHeight());
 
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
             Bitmap.createScaledBitmap(imageBitmap, 120, 120, false).compress(Bitmap.CompressFormat.PNG, 50, byteArrayOutputStream);
             byte[] byteArray = byteArrayOutputStream.toByteArray();
 
+            System.out.println("WIDTH " + imageBitmap.getWidth());
+            System.out.println("HEIGHT " + imageBitmap.getHeight());
             System.out.println("LENGTH " + byteArray.length);
-
             System.out.println("Byte Array");
+
             for (byte b : byteArray) {
                 System.out.print(b);
             }
@@ -89,20 +95,43 @@ public class MainActivity extends AppCompatActivity {
                 (Request.Method.POST, url, jsonObject, new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
-                        System.out.println("RESPONSE1: " + response.toString().substring(0,response.toString().length()/2));
-                        System.out.println("RESPONSE2: " + response.toString().substring(response.toString().length()/2, response.toString().length()));
 
                     }
                 }, new Response.ErrorListener() {
 
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        // TODO: Handle error
                         error.printStackTrace();
                     }
                 });
 
         queue.add(jsonObjectRequest);
+
+    }
+
+    private void sayWords(final String words, final String language) {
+
+        textToSpeech = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                if(status == TextToSpeech.SUCCESS) {
+
+                    System.out.println("HERE");
+                    switch (language){
+                        case "English":
+                            textToSpeech.setLanguage(Locale.ENGLISH);
+                        case "French":
+                            textToSpeech.setLanguage(Locale.FRENCH);
+                        default:
+                            textToSpeech.setLanguage(Locale.ENGLISH);
+
+                    }
+
+                    textToSpeech.speak(words, TextToSpeech.QUEUE_FLUSH, null);
+
+                }
+            }
+        });
 
     }
 
