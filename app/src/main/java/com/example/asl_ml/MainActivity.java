@@ -1,36 +1,22 @@
 package com.example.asl_ml;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.media.MediaPlayer;
-import android.os.Bundle;
-import android.provider.MediaStore;
-import android.speech.tts.TextToSpeech;
-import android.widget.ImageView;
-
-import androidx.appcompat.app.AppCompatActivity;
-
-import android.app.Activity;
 import android.hardware.Camera;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.MediaStore;
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.Surface;
 import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Timer;
-import java.util.TimerTask;
-
-import static android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE;
-import static android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO;
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -40,23 +26,32 @@ import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 
 import org.json.JSONObject;
-import org.w3c.dom.Text;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Locale;
+import java.util.Timer;
+import java.util.TimerTask;
+
+import static android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE;
+import static android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO;
 
 
 public class MainActivity extends AppCompatActivity {
     private Camera camera;
     private Button button;
     public ArrayList<String> files;
+    public boolean safe = false;
+    CameraPreview preview;
 
     int IMAGE_CACHE_SIZE = 60;
 
     static final int REQUEST_IMAGE_CAPTURE = 1;
     TextToSpeech textToSpeech;
-    boolean canSpeak;
-    static ImageView imageView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,9 +61,9 @@ public class MainActivity extends AppCompatActivity {
         releaseCameraAndPreview();
 
 
-        dispatchTakePictureIntent();
+        //dispatchTakePictureIntent();
 
-        sayWords("Nathan is the coolest human being ever", "English");
+      sayWords("Nathan is the coolest human being ever", "English");
 
         setContentView(R.layout.activity_main);
         button = findViewById(R.id.button);
@@ -77,9 +72,10 @@ public class MainActivity extends AppCompatActivity {
         // Open Camera
         boolean camera_opened = safeCameraOpen(camera_id);
         if(camera_opened){
+            safe = true;
             setCameraDisplayOrientation(this, camera_id, camera);
             // Set previews
-            CameraPreview preview = new CameraPreview(getApplicationContext(), camera);
+            preview = new CameraPreview(getApplicationContext(), camera);
             FrameLayout frameLayout = findViewById(R.id.camera_frame);
             frameLayout.addView(preview);
 
@@ -103,10 +99,24 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         counter++;
-                        camera.takePicture(null, null, mPicture);
+
+
+                        if(safe){
+                            try{
+                                camera.takePicture(null, null, mPicture);
+                                camera.startPreview();
+
+                            }catch(Exception e){
+                                e.printStackTrace();
+                            }
+
+                            System.out.println("PIC TAKEN");
+
+                        }
+
                         if (counter >= IMAGE_CACHE_SIZE){
-                            button.setClickable(true);
                             timer.cancel();
+                            button.setClickable(true);
 
                         }
                     }
@@ -120,7 +130,21 @@ public class MainActivity extends AppCompatActivity {
         final Camera.PictureCallback mPicture = new Camera.PictureCallback() {
             @Override
             public void onPictureTaken(byte[] data, Camera camera) {
+
+                safe = false;
                 File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
+
+                Bitmap bitmap = BitmapFactory.decodeFile(pictureFile.getPath());
+
+                ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                Bitmap.createScaledBitmap(bitmap, 120, 120, false).compress(Bitmap.CompressFormat.PNG, 50, byteArrayOutputStream);
+                byte[] byteArray = byteArrayOutputStream.toByteArray();
+                sendRequest(byteArray);
+
+
+
+                System.out.println("TESTING IF WE GOT HERE");
+
                 if (pictureFile == null){
                     Log.d("camera", "Error creating media file, check storage permissions");
                     return;
@@ -134,6 +158,11 @@ public class MainActivity extends AppCompatActivity {
                 } catch (IOException e) {
                     Log.d("camera", "Error accessing file: " + e.getMessage());
                 }
+
+                preview = new CameraPreview(getApplicationContext(), camera);
+                FrameLayout frameLayout = findViewById(R.id.camera_frame);
+                frameLayout.addView(preview);
+                safe = true;
             }
         };
         defineRecordActivity(mPicture);
@@ -233,39 +262,40 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-            Bundle extras = data.getExtras();
-            Bitmap imageBitmap = (Bitmap) extras.get("data");
+//    @Override
+//    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+//        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
+//            Bundle extras = data.getExtras();
+//            Bitmap imageBitmap = (Bitmap) extras.get("data");
+//
+//
+//            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+//            Bitmap.createScaledBitmap(imageBitmap, 120, 120, false).compress(Bitmap.CompressFormat.PNG, 50, byteArrayOutputStream);
+//            byte[] byteArray = byteArrayOutputStream.toByteArray();
+//
+//            System.out.println("WIDTH " + imageBitmap.getWidth());
+//            System.out.println("HEIGHT " + imageBitmap.getHeight());
+//            System.out.println("LENGTH " + byteArray.length);
+//            System.out.println("Byte Array");
+//
+//            for (byte b : byteArray) {
+//                System.out.print(b);
+//            }
+//
+//            String toDisplay = sendRequest(byteArray);
+//
+//            Bitmap decodedByte = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.length);
+//
+////            imageView = (ImageView) findViewById(R.id.cameraDisplay);
+//            imageView.setImageBitmap(decodedByte);
+//        }
+//    }
 
-
-            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            Bitmap.createScaledBitmap(imageBitmap, 120, 120, false).compress(Bitmap.CompressFormat.PNG, 50, byteArrayOutputStream);
-            byte[] byteArray = byteArrayOutputStream.toByteArray();
-
-            System.out.println("WIDTH " + imageBitmap.getWidth());
-            System.out.println("HEIGHT " + imageBitmap.getHeight());
-            System.out.println("LENGTH " + byteArray.length);
-            System.out.println("Byte Array");
-
-            for (byte b : byteArray) {
-                System.out.print(b);
-            }
-
-            sendRequest(byteArray);
-
-            Bitmap decodedByte = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.length);
-
-            imageView = (ImageView) findViewById(R.id.cameraDisplay);
-            imageView.setImageBitmap(decodedByte);
-        }
-    }
-
-    private void sendRequest(final byte[] byteArray) {
+    private String sendRequest(final byte[] byteArray) {
 
         RequestQueue queue = Volley.newRequestQueue(this);
         String url ="http://aslml-252919.appspot.com"; // Change URL to match our server
+        String toDisplay = "";
 
         System.out.println("HERE");
 
@@ -286,7 +316,9 @@ public class MainActivity extends AppCompatActivity {
                 (Request.Method.POST, url, jsonObject, new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
-
+                        String toDisplay = response.toString();
+                        System.out.println("RESPONSE " + toDisplay);
+                        //set textview initaltV
                     }
                 }, new Response.ErrorListener() {
 
@@ -296,7 +328,15 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
 
+        try{
+
         queue.add(jsonObjectRequest);
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+
+        return "hello world";
 
     }
 
