@@ -1,5 +1,14 @@
 package com.example.asl_ml;
 
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.media.MediaPlayer;
+import android.os.Bundle;
+import android.provider.MediaStore;
+import android.speech.tts.TextToSpeech;
+import android.widget.ImageView;
+
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.app.Activity;
@@ -23,6 +32,20 @@ import java.util.TimerTask;
 import static android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE;
 import static android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
+
+import org.json.JSONObject;
+import org.w3c.dom.Text;
+
+import java.io.ByteArrayOutputStream;
+import java.util.Locale;
+
+
 public class MainActivity extends AppCompatActivity {
     private Camera camera;
     private Button button;
@@ -30,11 +53,23 @@ public class MainActivity extends AppCompatActivity {
 
     int IMAGE_CACHE_SIZE = 60;
 
+    static final int REQUEST_IMAGE_CAPTURE = 1;
+    TextToSpeech textToSpeech;
+    boolean canSpeak;
+    static ImageView imageView;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         hideActivityBar();
         releaseCameraAndPreview();
+
+
+        dispatchTakePictureIntent();
+
+        sayWords("Nathan is the coolest human being ever", "English");
+
         setContentView(R.layout.activity_main);
         button = findViewById(R.id.button);
 
@@ -196,4 +231,108 @@ public class MainActivity extends AppCompatActivity {
             camera = null;
         }
     }
+
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
+            Bundle extras = data.getExtras();
+            Bitmap imageBitmap = (Bitmap) extras.get("data");
+
+
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            Bitmap.createScaledBitmap(imageBitmap, 120, 120, false).compress(Bitmap.CompressFormat.PNG, 50, byteArrayOutputStream);
+            byte[] byteArray = byteArrayOutputStream.toByteArray();
+
+            System.out.println("WIDTH " + imageBitmap.getWidth());
+            System.out.println("HEIGHT " + imageBitmap.getHeight());
+            System.out.println("LENGTH " + byteArray.length);
+            System.out.println("Byte Array");
+
+            for (byte b : byteArray) {
+                System.out.print(b);
+            }
+
+            sendRequest(byteArray);
+
+            Bitmap decodedByte = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.length);
+
+            imageView = (ImageView) findViewById(R.id.cameraDisplay);
+            imageView.setImageBitmap(decodedByte);
+        }
+    }
+
+    private void sendRequest(final byte[] byteArray) {
+
+        RequestQueue queue = Volley.newRequestQueue(this);
+        String url ="http://aslml-252919.appspot.com"; // Change URL to match our server
+
+        System.out.println("HERE");
+
+        JSONObject jsonObject = new JSONObject();
+
+        StringBuilder sb = new StringBuilder();
+
+        for(byte b : byteArray) {
+            sb.append(b);
+        }
+
+        try{
+            jsonObject.put("byteArray", sb);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
+                (Request.Method.POST, url, jsonObject, new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+
+                    }
+                }, new Response.ErrorListener() {
+
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        error.printStackTrace();
+                    }
+                });
+
+        queue.add(jsonObjectRequest);
+
+    }
+
+    private void sayWords(final String words, final String language) {
+
+        textToSpeech = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                if(status == TextToSpeech.SUCCESS) {
+
+                    System.out.println("HERE");
+                    switch (language){
+                        case "English":
+                            textToSpeech.setLanguage(Locale.ENGLISH);
+                        case "French":
+                            textToSpeech.setLanguage(Locale.FRENCH);
+                        default:
+                            textToSpeech.setLanguage(Locale.ENGLISH);
+
+                    }
+
+                    textToSpeech.speak(words, TextToSpeech.QUEUE_FLUSH, null);
+
+                }
+            }
+        });
+
+    }
+
+
+    private void dispatchTakePictureIntent() {
+        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
+            startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
+        }
+    }
+
+
 }
