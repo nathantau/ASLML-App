@@ -2,10 +2,12 @@ package com.example.asl_ml;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.Activity;
 import android.hardware.Camera;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
+import android.view.Surface;
 import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
@@ -31,6 +33,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        hideActivityBar();
         releaseCameraAndPreview();
         setContentView(R.layout.activity_main);
         button = findViewById(R.id.button);
@@ -39,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
         // Open Camera
         boolean camera_opened = safeCameraOpen(camera_id);
         if(camera_opened){
+            setCameraDisplayOrientation(this, camera_id, camera);
             // Set previews
             CameraPreview preview = new CameraPreview(getApplicationContext(), camera);
             FrameLayout frameLayout = findViewById(R.id.camera_frame);
@@ -46,61 +50,91 @@ public class MainActivity extends AppCompatActivity {
 
             define_file_cache(IMAGE_CACHE_SIZE);
 
-            // Every time an image is retrieved, we need to pull it from the front and push the name to the back.
-            final Camera.PictureCallback mPicture = new Camera.PictureCallback() {
-                @Override
-                public void onPictureTaken(byte[] data, Camera camera) {
-                    File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
-                    if (pictureFile == null){
-                        Log.d("camera", "Error creating media file, check storage permissions");
-                        return;
-                    }
-                    try {
-                        FileOutputStream fos = new FileOutputStream(pictureFile);
-                        fos.write(data);
-                        fos.close();
-                    } catch (FileNotFoundException e) {
-                        Log.d("camera", "File not found: " + e.getMessage());
-                    } catch (IOException e) {
-                        Log.d("camera", "Error accessing file: " + e.getMessage());
-                    }
-                }
-            };
-            button.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    button.setClickable(false);
-                    final Timer timer = new Timer();
-                    int begin = 0;
-                    int timeInterval = 333;
-                    timer.schedule(new TimerTask() {
-                        int counter = 0;
-                        @Override
-                        public void run() {
-                            counter++;
-                            camera.takePicture(null, null, mPicture);
-                            if (counter >= IMAGE_CACHE_SIZE){
-                                button.setClickable(true);
-                                timer.cancel();
+            defineImageCapture();
 
-                            }
+        }
+    }
+
+    public void defineRecordActivity(final Camera.PictureCallback mPicture){
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                button.setClickable(false);
+                final Timer timer = new Timer();
+                int begin = 0;
+                int timeInterval = 333;
+                timer.schedule(new TimerTask() {
+                    int counter = 0;
+                    @Override
+                    public void run() {
+                        counter++;
+                        camera.takePicture(null, null, mPicture);
+                        if (counter >= IMAGE_CACHE_SIZE){
+                            button.setClickable(true);
+                            timer.cancel();
+
                         }
-                    }, begin, timeInterval);
+                    }
+                }, begin, timeInterval);
+            }
+        });
+    }
+
+    public void defineImageCapture(){
+        // Every time an image is retrieved, we need to pull it from the front and push the name to the back.
+        final Camera.PictureCallback mPicture = new Camera.PictureCallback() {
+            @Override
+            public void onPictureTaken(byte[] data, Camera camera) {
+                File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
+                if (pictureFile == null){
+                    Log.d("camera", "Error creating media file, check storage permissions");
+                    return;
                 }
-            });
+                try {
+                    FileOutputStream fos = new FileOutputStream(pictureFile);
+                    fos.write(data);
+                    fos.close();
+                } catch (FileNotFoundException e) {
+                    Log.d("camera", "File not found: " + e.getMessage());
+                } catch (IOException e) {
+                    Log.d("camera", "Error accessing file: " + e.getMessage());
+                }
+            }
+        };
+        defineRecordActivity(mPicture);
+    }
+
+    public void hideActivityBar(){
+        try {
+            this.getSupportActionBar().hide();
+        } catch (NullPointerException e){}
+    }
+
+    public static void setCameraDisplayOrientation(Activity activity,
+                                                   int cameraId,
+                                                   android.hardware.Camera camera) {
+        android.hardware.Camera.CameraInfo info = new android.hardware.Camera.CameraInfo();
+        android.hardware.Camera.getCameraInfo(cameraId, info);
+        int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
+        int degrees = 0;
+        switch (rotation) {
+            case Surface.ROTATION_0: degrees = 0; break;
+            case Surface.ROTATION_90: degrees = 90; break;
+            case Surface.ROTATION_180: degrees = 180; break;
+            case Surface.ROTATION_270: degrees = 270; break;
         }
 
-        /*int failed_attempts = 0;
-        while (!camera_opened){
-            failed_attempts++;
-            camera_id++;
-            Log.e("ASL-ML",
-                    "Attempting to reopen camera \n Failed Attempts :: " + failed_attempts);
-            camera_opened = safeCameraOpen(camera_id);
-        }*/
-        // TODO:: Get Camera Preview
-
+        int result;
+        if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+            result = (info.orientation + degrees) % 360;
+            result = (360 - result) % 360;  // compensate the mirror
+        } else {  // back-facing
+            result = (info.orientation - degrees + 360) % 360;
+        }
+        camera.setDisplayOrientation(result);
     }
+
+
 
     private void define_file_cache(int size){
         // Define file names for file cache
@@ -133,8 +167,7 @@ public class MainActivity extends AppCompatActivity {
             files.remove(0);
         } else if(type == MEDIA_TYPE_VIDEO) {
             // TODO:: This is not implemented yet, do not use
-            mediaFile = new File(mediaStorageDir.getPath() + File.separator +
-                    "VID_" + ".mp4");
+            // mediaFile = new File(mediaStorageDir.getPath() + File.separator + "VID_" + ".mp4");
             return null;
         } else {
             return null;
@@ -163,5 +196,4 @@ public class MainActivity extends AppCompatActivity {
             camera = null;
         }
     }
-
 }
