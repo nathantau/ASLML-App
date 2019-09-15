@@ -1,3 +1,14 @@
 <resources>
     <string name="app_name">ASL-ML</string>
+
+    <string name="no_connection">No internet connection! Cannot be translated!</string>
+
+
+    <string-array name="language_arrays">
+        <item>English</item>
+        <item>French</item>
+        <item>Spanish</item>
+        <item>Chinese</item>
+        <item>German</item>
+    </string-array>
 </resources>
