@@ -42,9 +42,14 @@ public class MainActivity extends AppCompatActivity {
             Bundle extras = data.getExtras();
             Bitmap imageBitmap = (Bitmap) extras.get("data");
 
+            System.out.println("WIDTH" + imageBitmap.getWidth());
+            System.out.println("HEIGHT" + imageBitmap.getHeight());
+
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            imageBitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
+            Bitmap.createScaledBitmap(imageBitmap, 120, 120, false).compress(Bitmap.CompressFormat.PNG, 50, byteArrayOutputStream);
             byte[] byteArray = byteArrayOutputStream.toByteArray();
+
+            System.out.println("LENGTH " + byteArray.length);
 
             System.out.println("Byte Array");
             for (byte b : byteArray) {
